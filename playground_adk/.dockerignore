@@ -1,0 +1,14 @@
+# Docker
+.dart_tool/
+.git/
+.github/
+.idea/
+build/
+ios/
+android/
+linux/
+macos/
+windows/
+test/
+*.iml
+pubspec.lock

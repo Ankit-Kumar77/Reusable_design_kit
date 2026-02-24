@@ -1,0 +1,60 @@
+pipeline {
+    agent any
+
+    environment {
+        // Name for our Docker image
+        IMAGE_NAME = "playground-adk"
+        // Use the build number as the image tag for versioning
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
+    }
+
+    stages {
+        stage('Prepare') {
+            steps {
+                echo 'Checking Flutter version...'
+                sh 'flutter --version'
+            }
+        }
+
+        stage('Build Flutter App') {
+            steps {
+                echo 'Building Flutter Web...'
+                dir('playground_adk') {
+                    sh 'flutter pub get'
+                    sh 'flutter build web --release'
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                echo 'Building container image...'
+                // We run from the root folder to ensure design_kit is available in the build context
+                sh "docker build -f playground_adk/Dockerfile -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                sh "docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest"
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                echo 'Deploying to K8s...'
+                dir('playground_adk/k8s') {
+                    sh "kubectl apply -f deployment.yaml"
+                    sh "kubectl apply -f service.yaml"
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline finished.'
+        }
+        success {
+            echo 'Deployment successful!'
+        }
+        failure {
+            echo 'Pipeline failed. Check logs for details.'
+        }
+    }
+}
